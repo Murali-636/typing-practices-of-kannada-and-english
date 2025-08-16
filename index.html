@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kannada & English Typing Practice — Surabhi Layout</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { font-family: sans-serif; background: #0f172a; color: #f1f5f9; margin: 0; padding: 0; }
+  header { padding: 1em; display: flex; justify-content: space-between; align-items: center; background: #1e293b; }
+  h1 { font-size: 1.2em; margin: 0; }
+  main { max-width: 800px; margin: auto; padding: 1em; }
+  textarea { width: 100%; height: 150px; padding: 10px; font-size: 1.1em; background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; }
+  .stats { display: flex; gap: 1em; margin-top: 1em; }
+  .stat { flex: 1; padding: 0.5em; background: #1e293b; text-align: center; border-radius: 6px; }
+  select, button { padding: 0.4em 0.6em; font-size: 1em; margin-right: 0.5em; }
+  .keyboard { margin-top: 1em; }
+  .row { display: flex; justify-content: center; gap: 4px; margin-bottom: 4px; }
+  .key { background: #1e293b; padding: 6px; border-radius: 4px; text-align: center; min-width: 32px; }
+  .key small { display: block; font-size: 0.7em; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kannada & English Typing Practice</h1>
+  <div>
+    <select id="mode">
+      <option value="kannada">Kannada (Surabhi)</option>
+      <option value="english">English</option>
+    </select>
+    <select id="duration">
+      <option value="1">1 min</option>
+      <option value="3">3 min</option>
+      <option value="5" selected>5 min</option>
+      <option value="10">10 min</option>
+      <option value="15">15 min</option>
+      <option value="20">20 min</option>
+    </select>
+    <label><input type="checkbox" id="surabhiMap" checked> In-browser Surabhi</label>
+  </div>
+</header>
+
+<main>
+  <div id="target" style="padding: 1em; background: #1e293b; border-radius: 6px; min-height: 2.5em;"></div>
+  <div style="margin-top: 0.5em;">
+    <button onclick="startTest()">Start</button>
+    <button onclick="resetTest()">Reset</button>
+  </div>
+  <textarea id="input" placeholder="Start typing here..." disabled></textarea>
+  <div class="stats">
+    <div class="stat"><div id="wpm">0</div><small>WPM</small></div>
+    <div class="stat"><div id="accuracy">100%</div><small>Accuracy</small></div>
+    <div class="stat"><div id="chars">0</div><small>Chars Typed</small></div>
+    <div class="stat"><div id="timeLeft">0:00</div><small>Time Left</small></div>
+  </div>
+  <div class="keyboard" id="keyboard"></div>
+</main>
+
+<script>
+const EN_PASSAGES = [
+  "The quick brown fox jumps over the lazy dog.",
+  "Pack my box with five dozen liquor jugs.",
+  "Waltz, bad nymph, for quick jigs vex!",
+  "Sphinx of black quartz, judge my vow."
+];
+const KN_PASSAGES = [
+  "ಇದು ಕನ್ನಡ ಟೈಪಿಂಗ್ ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಮಾದರಿ ವಾಕ್ಯ.",
+  "ಕಲಿಯಲು ಹಿಡಿತ, ಅಭ್ಯಾಸವೇ ಯಶಸ್ಸಿನ ದಾರಿ.",
+  "ಪಾಠವನ್ನು ನಿಧಾನವಾಗಿ ಓದಿ, ತಪ್ಪುಗಳನ್ನು ಸರಿಪಡಿಸಿ.",
+  "ವಾಕ್ಯಗಳನ್ನು ಸರಿಯಾಗಿ ಟೈಪ್ ಮಾಡುವ ಅಭ್ಯಾಸ ಬೆಳೆಸಿ."
+];
+
+const SURABHI_MAP = {
+  "KeyA": { base: "ಅ", shift: "ಆ" }, "KeyB": { base: "ಬ", shift: "ಭ" }, "KeyC": { base: "ಚ", shift: "ಛ" },
+  "KeyD": { base: "ಡ", shift: "ಢ" }, "KeyE": { base: "ಇ", shift: "ಈ" }, "KeyF": { base: "ಾ", shift: "ಾ" },
+  "KeyG": { base: "ಗ", shift: "ಘ" }, "KeyH": { base: "ಹ", shift: "ಖ" }, "KeyI": { base: "ಎ", shift: "ಏ" },
+  "KeyJ": { base: "ಜ", shift: "ಝ" }, "KeyK": { base: "ಕ", shift: "ಖ" }, "KeyL": { base: "ಲ", shift: "ಳ" },
+  "KeyM": { base: "ಂ", shift: "ಃ" }, "KeyN": { base: "ನ", shift: "ಣ" }, "KeyO": { base: "ಒ", shift: "ಓ" },
+  "KeyP": { base: "ಪ", shift: "ಫ" }, "KeyQ": { base: "ಶ", shift: "ಷ" }, "KeyR": { base: "ರ", shift: "ಋ" },
+  "KeyS": { base: "ಸ", shift: "ಷ" }, "KeyT": { base: "ಟ", shift: "ಠ" }, "KeyU": { base: "ಉ", shift: "ಊ" },
+  "KeyV": { base: "ವ", shift: "ವ" }, "KeyW": { base: "ತ", shift: "ಥ" }, "KeyX": { base: "ಳ", shift: "ಽ" },
+  "KeyY": { base: "ಯ", shift: "ಯ" }, "KeyZ": { base: "ಣ", shift: "ಂ" }, "Space": { base: " ", shift: " " }
+};
+
+let timerId, startTime, duration, running = false, targetText = "", typedText = "", correctCount = 0;
+const modeEl = document.getElementById("mode");
+const durEl = document.getElementById("duration");
+const inputEl = document.getElementById("input");
+const wpmEl = document.getElementById("wpm");
+const accEl = document.getElementById("accuracy");
+const charsEl = document.getElementById("chars");
+const timeEl = document.getElementById("timeLeft");
+const targetEl = document.getElementById("target");
+const surabhiChk = document.getElementById("surabhiMap");
+
+function renderKeyboard() {
+  const container = document.getElementById("keyboard");
+  container.innerHTML = "";
+  const rows = [["KeyQ","KeyW","KeyE","KeyR","KeyT","KeyY","KeyU","KeyI","KeyO","KeyP"],
+                ["KeyA","KeyS","KeyD","KeyF","KeyG","KeyH","KeyJ","KeyK","KeyL"],
+                ["KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Space"]];
+  rows.forEach(r => {
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "row";
+    r.forEach(code => {
+      const key = SURABHI_MAP[code] || { base: "", shift: "" };
+      const div = document.createElement("div");
+      div.className = "key";
+      div.innerHTML = `<small>${key.shift}</small>${key.base}`;
+      rowDiv.appendChild(div);
+    });
+    container.appendChild(rowDiv);
+  });
+}
+renderKeyboard();
+
+function startTest() {
+  if (running) return;
+  const pool = modeEl.value === "english" ? EN_PASSAGES : KN_PASSAGES;
+  targetText = pool[Math.floor(Math.random()*pool.length)];
+  targetEl.textContent = targetText;
+  typedText = ""; correctCount = 0;
+  inputEl.value = "";
+  inputEl.disabled = false;
+  inputEl.focus();
+  duration = parseInt(durEl.value) * 60;
+  startTime = Date.now();
+  running = true;
+  timerId = setInterval(tick, 100);
+}
+function resetTest() {
+  clearInterval(timerId);
+  running = false;
+  inputEl.disabled = true;
+  wpmEl.textContent = "0";
+  accEl.textContent = "100%";
+  charsEl.textContent = "0";
+  timeEl.textContent = "0:00";
+  targetEl.textContent = "";
+}
+function tick() {
+  const elapsed = Math.floor((Date.now()-startTime)/1000);
+  const remain = Math.max(0, duration - elapsed);
+  timeEl.textContent = `${Math.floor(remain/60)}:${String(remain%60).padStart(2,'0')}`;
+  if (remain <= 0) { clearInterval(timerId); running = false; inputEl.disabled = true; }
+}
+inputEl.addEventListener("input", e => {
+  typedText = e.target.value;
+  correctCount = 0;
+  for (let i=0; i<typedText.length; i++) if (typedText[i] === targetText[i]) correctCount++;
+  const acc = typedText.length ? Math.round((correctCount/typedText.length)*100) : 100;
+  accEl.textContent = acc + "%";
+  charsEl.textContent = typedText.length;
+  const elapsed = (Date.now()-startTime)/1000;
+  const wpm = elapsed>0 ? Math.round(((typedText.length/5)/elapsed)*60) : 0;
+  wpmEl.textContent = wpm;
+});
+let shiftHeld = false;
+window.addEventListener("keydown", e => {
+  if (!running || !surabhiChk.checked || modeEl.value !== "kannada") return;
+  if (e.key === "Shift") { shiftHeld = true; return; }
+  const map = SURABHI_MAP[e.code];
+  if (map && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    const glyph = shiftHeld ? map.shift : map.base;
+    const pos = inputEl.selectionStart;
+    const val = inputEl.value;
+    inputEl.value = val.slice(0,pos) + glyph + val.slice(pos);
+    inputEl.selectionStart = inputEl.selectionEnd = pos + glyph.length;
+    inputEl.dispatchEvent(new Event("input"));
+  }
+});
+window.addEventListener("keyup", e => { if (e.key === "Shift") shiftHeld = false; });
+</script>
+
+</body>
+</html>
